@@ -43,26 +43,34 @@ def tkeo(arr):
     return(tkeo)
 
 def loadData(datapath, datatype='geo'):
-    file = h5py.File(datapath, "r")
-    if datatype!='pro':
-        print("Structure of data:")
-        for key in file.keys():
-            print(file[key], key, file[key].name)
-
-    if datatype=='geo':
-        return np.array(np.array(file['Geometry']).tolist())
-    if datatype=='PT':
-        PT = np.array(np.array(file['ParticleTruth']).tolist())
-        PET = np.array(np.array(file['PETruth']).tolist())
-        WF = np.array(file['Waveform'])
-        return PET, WF, PT
-    if datatype=='pro':
-        X = torch.Tensor(np.array(file['X']))
-        Y = torch.Tensor(np.array(file['Y']))
-        return X, Y
-    # PET = np.array(np.array(file['PETruth']).tolist())
-    WF = np.array(file['Waveform'])
-    return WF
+    with h5py.File(datapath, "r") as in_file: 
+        # 如果不是pro，则读取的是数据集h5文件，打印文件结构
+        if datatype != 'pro':
+            print("Structure of data:")
+            for key in in_file.keys():
+                print(in_file[key], key, in_file[key].name)
+        
+        # 读取geo.h5
+        if datatype == 'geo':
+            return in_file['Geometry'][...]
+        
+        # 读取final-${num}.h5
+        if datatype == 'PT':
+            PT = in_file['ParticleTruth'][...]
+            PET = in_file['PETruth'][...]
+            WF = in_file['Waveform'][...]
+            return PET, WF, PT
+        
+        # 读取训练后的数据
+        if datatype=='pro':
+            X = torch.Tensor(np.array(file['X']))
+            Y = torch.Tensor(np.array(file['Y']))
+            return X, Y
+        
+        # PET = np.array(np.array(file['PETruth']).tolist())
+        # 如果是另外的datatype，则返回Waveform
+        WF = in_file['Waveform'][...]
+        return WF
 
 class TrainData(Dataset):
     def __init__(self, folder_path):
