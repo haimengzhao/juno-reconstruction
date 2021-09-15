@@ -71,6 +71,27 @@ def loadData(datapath, datatype='geo'):
         # 如果是另外的datatype，则返回Waveform
         WF = in_file['Waveform'][...]
         return WF
+def getNum(dataset):
+    '''
+    getNum: 返回每个EventID对应的PE数或波形数。
+    
+    输入：Dataset，structured array, 形状为(n,)
+         传入的既可以是Waveform表，也可以是PETruth表，但一定要有EventID列，且按照顺序排列。
+    输出：num, ndarray, 形状为(m,)，下标为i对应的数为EventID=i时对应的PE数或波形数
+         indices, ndarray, 形状为(m,), unique后返回的index
+    '''
+    eventIDs, indices = np.unique(dataset[type], return_index=True)
+    indices = np.append(indices, dataset.shape[0]))
+    num = np.diff(indices)
+    return num, indices
+
+def getCancel(maxIndex, maxValue):
+    '''
+    getCancel
+    '''
+    step = maxValue / 8
+    absArray = maxValue - np.abs(np.arange(1000) - maxIndex) * step
+    return np.where(absArray > 0, absArray, 0)
 
 class TrainData(Dataset):
     def __init__(self, folder_path):
