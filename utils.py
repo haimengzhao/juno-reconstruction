@@ -61,7 +61,7 @@ def loadData(datapath, datatype='geo'):
             WF = in_file['Waveform'][...]
             return PET, WF, PT
         
-        # 读取训练后的数据
+        # 读取训练需要的数据
         if datatype=='pro':
             X = torch.Tensor(np.array(file['X']))
             Y = torch.Tensor(np.array(file['Y']))
@@ -80,10 +80,50 @@ def getNum(dataset):
     输出：num, ndarray, 形状为(m,)，下标为i对应的数为EventID=i时对应的PE数或波形数
          indices, ndarray, 形状为(m,), unique后返回的index
     '''
-    eventIDs, indices = np.unique(dataset[type], return_index=True)
-    indices = np.append(indices, dataset.shape[0]))
+    eventIDs, indices = np.unique(dataset['EventID'], return_index=True)
+    indices = np.append(indices, dataset.shape[0])
     num = np.diff(indices)
     return num, indices
+
+def getPePerWF(waveform, points_more_than_threshold):
+    '''
+    
+    '''
+    def getCancel(maxIndex, maxValue):
+        '''
+        getCancel: 返回一个中心在(maxIndex, maxValue)的绝对值函数，小于0的地方变为0，宽度为16
+        '''
+        step = maxValue / 8
+        absArray = maxValue - np.abs(np.arange(1000) - maxIndex) * step
+        return np.where(absArray > 0, absArray, 0)
+
+    cancelledWF = waveform
+    wfArgmax = np.array([])
+    integrate = np.sum(cancelledWF)
+    init_integrate = integrate
+    init_points = points_more_than_threshold
+    first = True
+    noise_uncancelled_region = np.array([], dtype=int)
+    
+    while (np.max(cancelledWF) > 8 or integrate >= 80) \
+            and (points_more_than_threshold > 12 or integrate >= 96 or first) \
+            and (wfArgmax.shape[0] or init_points >= 4 or init_integrate >= 60):
+        argmax = np.argmax(cancelledWF)
+        wfArgmax = np.append(wfArgmax, argmax)
+        cancelledWF = cancelledWF - getCancel(argmax, 12)
+        noise_uncancelled_region = np.intersect1d(
+            np.union1d(noise_uncancelled_region, np.arange(argmax-8, argmax+9)),
+            np.arange(1000)
+        )
+        judge_noise = cancelledWF[noise_uncancelled_region]
+        judge_noise = np.where(judge_noise < 8, 0, judge_noise)
+        cancelledWF[noise_uncancelled_region] = judge_noise
+        points_more_than_threshold = cancelledWF.nonzero()[0].shape[0]
+        integrate = np.sum(cancelledWF)
+        first = False
+
+    return wfArgmax
+
 
 def getCancel(maxIndex, maxValue):
     '''
