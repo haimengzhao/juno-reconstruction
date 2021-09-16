@@ -2,3 +2,4 @@ data/*
 train/*
 .ipynb_checkpoints/*
 __pycache__/*
+model*.txt
