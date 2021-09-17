@@ -39,30 +39,58 @@ def preprocessWF(trainWF):
     meanPeTimePerTrainWF = res[:, 1]
     return intTrainWF, pointsPerTrainWF, pePerTrainWFCalc, meanPeTimePerTrainWF
 
+def getPePerTrainWF(trainPET, trainWF):
+    print("正在得到训练集的目标pePerWF...")
+    numPET, peIndices = utils.getNum(trainPET)
+    numPEW, wfIndices = utils.getNum(trainWF)
+    splitWFChannels = np.split(trainWF['ChannelID'], wfIndices[1:-1])
+    for index, arr in enumerate(tqdm(np.split(trainPET['ChannelID'], peIndices[1:-1]))):
+        channels, counts = np.unique(arr, return_counts=True)
+        zeroPeChannelCount = numPEW[index].astype(int) - channels.shape[0]
+        while zeroPeChannelCount:
+            alignedChannels = np.append(channels, np.zeros(zeroPeChannelCount)-1)
+            indexToInsert = np.asarray(alignedChannels != splitWFChannels[index]).nonzero()[0][0]
+            channels = np.insert(channels, indexToInsert, splitWFChannels[index][indexToInsert])
+            counts = np.insert(counts, indexToInsert, 0)
+            zeroPeChannelCount -= 1
+
+        pePerTrainWF = np.append(pePerTrainWF, counts)
+
+    return pePerTrainWF.flatten().astype(int)
+
 if __name__ == '__main__':
     # 数据集所在位置
     trainpathRoot = './data/final-'
-    dtype = [
+    problemDType = [
         ('intWF', '<i4'),
         ('pointsPerWF', '<i2'),
         ('pePerWFCalc', '<i2'),
         ('meanPeTimePerWF', '<f8')
     ]
+    trainDType = [
+        ('intWF', '<i4'),
+        ('pointsPerWF', '<i2'),
+        ('pePerWFCalc', '<i2'),
+        ('meanPeTimePerWF', '<f8'),
+        ('pePerWF', '<i2')
+    ]
 
-    # 先处理问题
+
+    # 先处理题目
     if not os.path.exists(f"./train/final_wf.h5"):
+        print("下面处理题目...")
         trainWF = utils.loadData(f"./data/final.h5", 'test')
         intTrainWF, pointsPerTrainWF, pePerTrainWFCalc, meanPeTimePerTrainWF = preprocessWF(trainWF)
         
         # 存储文件
         data = np.zeros(
             intTrainWF.shape[0],
-            dtype=dtype
+            dtype=problemDType
         )
         data['intWF'] = intTrainWF
         data['pointsPerWF'] = pointsPerTrainWF
         data['pePerWFCalc'] = pePerTrainWFCalc
-        data['meanPeTimePerWF'] = meanPeTimePerTrainWF    
+        data['meanPeTimePerWF'] = meanPeTimePerTrainWF
         
         with h5.File('./train/final_wf.h5', 'w') as opt:
             opt['Waveform'] = data
@@ -76,16 +104,18 @@ if __name__ == '__main__':
             continue
         trainPET, trainWF, trainPT = utils.loadData(f"{trainpathRoot}{i}.h5", 'PT')
         intTrainWF, pointsPerTrainWF, pePerTrainWFCalc, meanPeTimePerTrainWF = preprocessWF(trainWF)
-        
+        pePerTrainWF = getPePerTrainWF(trainPET, trainWF)
+
         # 存储文件
         data = np.zeros(
             intTrainWF.shape[0],
-            dtype=dtype
+            dtype=trainDType
         )
         data['intWF'] = intTrainWF
         data['pointsPerWF'] = pointsPerTrainWF
         data['pePerWFCalc'] = pePerTrainWFCalc
         data['meanPeTimePerWF'] = meanPeTimePerTrainWF
+        data['pePerWF'] = pePerTrainWF
         
         with h5.File(f"./train/final_{i}_wf.h5", 'w') as opt:
             opt['Waveform'] = data
