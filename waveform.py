@@ -1,4 +1,5 @@
 import multiprocessing
+import os
 import warnings
 import numpy as np
 import h5py as h5
@@ -49,25 +50,30 @@ if __name__ == '__main__':
     ]
 
     # 先处理问题
-    trainWF = utils.loadData(f"./data/final.h5", 'test')
-    intTrainWF, pointsPerTrainWF, pePerTrainWFCalc, meanPeTimePerTrainWF = preprocessWF(trainWF)
+    if not os.path.exists(f"./train/final_wf.h5"):
+        trainWF = utils.loadData(f"./data/final.h5", 'test')
+        intTrainWF, pointsPerTrainWF, pePerTrainWFCalc, meanPeTimePerTrainWF = preprocessWF(trainWF)
         
-    # 存储文件
-    data = np.zeros(
-        intTrainWF.shape[0],
-        dtype=dtype
-    )   
-    data['intWF'] = intTrainWF
-    data['pointsPerWF'] = pointsPerTrainWF
-    data['pePerWFCalc'] = pePerTrainWFCalc
-    data['meanPeTimePerWF'] = meanPeTimePerTrainWF    
+        # 存储文件
+        data = np.zeros(
+            intTrainWF.shape[0],
+            dtype=dtype
+        )
+        data['intWF'] = intTrainWF
+        data['pointsPerWF'] = pointsPerTrainWF
+        data['pePerWFCalc'] = pePerTrainWFCalc
+        data['meanPeTimePerWF'] = meanPeTimePerTrainWF    
         
-    with h5.File('./train/final_wf.h5', 'w') as opt:
-        opt['Waveform'] = data
+        with h5.File('./train/final_wf.h5', 'w') as opt:
+            opt['Waveform'] = data
 
 
     # 循环处理训练集
     for i in range(2, 20):
+        print(f"下面处理final-{i}.h5...")
+        if os.path.exists(f"./train/final_{i}_wf.h5"):
+            print(f"final-{i}.h5已经处理过了，继续...")
+            continue
         trainPET, trainWF, trainPT = utils.loadData(f"{trainpathRoot}{i}.h5", 'PT')
         intTrainWF, pointsPerTrainWF, pePerTrainWFCalc, meanPeTimePerTrainWF = preprocessWF(trainWF)
         
