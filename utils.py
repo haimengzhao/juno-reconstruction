@@ -85,7 +85,7 @@ def getNum(dataset):
     num = np.diff(indices)
     return num, indices
 
-def getPePerWF(waveform, points_more_than_threshold):
+def getPePerWF(waveform):
     '''
     
     '''
@@ -101,11 +101,12 @@ def getPePerWF(waveform, points_more_than_threshold):
     wfArgmax = np.array([])
     integrate = np.sum(cancelledWF)
     init_integrate = integrate
+    points_more_than_threshold = np.sum(cancelledWF > 0)
     init_points = points_more_than_threshold
     first = True
     noise_uncancelled_region = np.array([], dtype=int)
     
-    while (np.max(cancelledWF) > 8 or integrate >= 80) \
+    while (np.max(cancelledWF) > 8 or integrate >= 80 or first) \
             and (points_more_than_threshold > 12 or integrate >= 96 or first) \
             and (wfArgmax.shape[0] or init_points >= 4 or init_integrate >= 60):
         argmax = np.argmax(cancelledWF)
@@ -122,7 +123,8 @@ def getPePerWF(waveform, points_more_than_threshold):
         integrate = np.sum(cancelledWF)
         first = False
 
-    return wfArgmax
+    filteredWFArgmax = wfArgmax[np.all([wfArgmax >= 50, wfArgmax <= 600], axis=0)]
+    return wfArgmax.shape[0], np.nanmean(filteredWFArgmax)
 
 
 def getCancel(maxIndex, maxValue):
