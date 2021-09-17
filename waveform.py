@@ -43,6 +43,7 @@ def getPePerTrainWF(trainPET, trainWF):
     print("正在得到训练集的目标pePerWF...")
     numPET, peIndices = utils.getNum(trainPET)
     numPEW, wfIndices = utils.getNum(trainWF)
+    pePerTrainWF = np.array([])
     splitWFChannels = np.split(trainWF['ChannelID'], wfIndices[1:-1])
     for index, arr in enumerate(tqdm(np.split(trainPET['ChannelID'], peIndices[1:-1]))):
         channels, counts = np.unique(arr, return_counts=True)
