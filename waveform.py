@@ -87,6 +87,6 @@ if __name__ == '__main__':
         data['pePerWFCalc'] = pePerTrainWFCalc
         data['meanPeTimePerWF'] = meanPeTimePerTrainWF
         
-        with h5.File('./train/final_{i}_wf.h5', 'w') as opt:
+        with h5.File(f"./train/final_{i}_wf.h5", 'w') as opt:
             opt['Waveform'] = data
 

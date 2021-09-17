@@ -1,0 +1,4 @@
+ans1.h5: 0.196
+ans2.h5: 0.102 换p的损失函数为题目要求的函数
+ans3.h5: 0.117 换pePerWF的损失函数为average_precision，增加pePerWF的round与astype(int)
+ans4.h5: 0.105 在ans3.h5的基础上，去除round与astype(int)
