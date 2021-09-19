@@ -7,6 +7,16 @@ from tqdm import tqdm
 import utils
 
 def preprocessWF(trainWF):
+    '''
+    preprocessWF: 预处理波形
+    
+    输入: trainWF: (n, 1000) ndarray
+
+    输出：波形积分值(n,) ndarray
+          超过阈值的点数(n,) ndarray
+          手作算法得到的每个波形PE数(n,) ndarray
+          手作算法得到的每个波形PETime(n,) ndarray
+    '''
     print("正在去除波形噪音...")
     denoisedTrainWF = np.empty((trainWF.shape[0], 1000), dtype='<i2')
     step = 2000000
@@ -40,6 +50,14 @@ def preprocessWF(trainWF):
     return intTrainWF, pointsPerTrainWF, pePerTrainWFCalc, meanPeTimePerTrainWF
 
 def getPePerTrainWF(trainPET, trainWF):
+    '''
+    getPePerTrainWF: 从PETruth与Waveform中得到真实的每个波形对应的PE数
+
+    输入: trainPET，文件中的PETruth表
+          trainWF, 文件中的Waveform表
+
+    输出: 真实的每个波形对应的PE数(n,) ndarray
+    '''
     print("正在得到训练集的目标pePerWF...")
     numPET, peIndices = utils.getNum(trainPET)
     numPEW, wfIndices = utils.getNum(trainWF)
@@ -78,11 +96,12 @@ if __name__ == '__main__':
 
 
     # 先处理题目
-    if not os.path.exists(f"./train/final_wf.h5"):
+    if True:# not os.path.exists(f"./train/final_wf.h5"):
         print("下面处理题目...")
         trainWF = utils.loadData(f"./data/final.h5", 'test')
         intTrainWF, pointsPerTrainWF, pePerTrainWFCalc, meanPeTimePerTrainWF = preprocessWF(trainWF)
-        
+        _, wfIndices = utils.getNum(trainWF)
+
         # 存储文件
         data = np.zeros(
             intTrainWF.shape[0],
@@ -95,17 +114,19 @@ if __name__ == '__main__':
         
         with h5.File('./train/final_wf.h5', 'w') as opt:
             opt['Waveform'] = data
+            opt['WfIndices'] = wfIndices
 
 
     # 循环处理训练集
     for i in range(2, 20):
         print(f"下面处理final-{i}.h5...")
-        if os.path.exists(f"./train/final_{i}_wf.h5"):
+        if False:#os.path.exists(f"./train/final_{i}_wf.h5"):
             print(f"final-{i}.h5已经处理过了，继续...")
             continue
         trainPET, trainWF, trainPT = utils.loadData(f"{trainpathRoot}{i}.h5", 'PT')
         intTrainWF, pointsPerTrainWF, pePerTrainWFCalc, meanPeTimePerTrainWF = preprocessWF(trainWF)
         pePerTrainWF = getPePerTrainWF(trainPET, trainWF)
+        _, wfIndices = utils.getNum(trainWF)
 
         # 存储文件
         data = np.zeros(
@@ -120,4 +141,5 @@ if __name__ == '__main__':
         
         with h5.File(f"./train/final_{i}_wf.h5", 'w') as opt:
             opt['Waveform'] = data
+            opt['WfIndices'] = wfIndices
 
