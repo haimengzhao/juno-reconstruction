@@ -5,3 +5,6 @@ ans4.h5: 0.105 在ans3.h5的基础上，去除round与astype(int)
 ans5.h5: 0.107 将pePerWF的损失函数换为loss_eval，只是分母=波形积分
 ans6.h5: 0.113 加入两个feature来评估p: peTime的平均值与标准差
 ans7.h5: 0.091 在ans6.h5的基础上，使用训练集2-6
+ans8.h5: 0.091 使用训练集2-16
+ans9.h5: 0.09  调参，p的leaves 2**8, depth=-1
+ansPlay.h5: 0.099 清理代码，使用model.ipynb的代码，训练出两个play模型，并且用play模型跑final.ipynb
