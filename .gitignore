@@ -4,3 +4,4 @@ train/*
 __pycache__/*
 model*.txt
 .vscode/*
+.DS_Store
