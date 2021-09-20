@@ -3,7 +3,7 @@
 all: figures.pdf
 
 clean:
-	rm -rf data 
+	rm -rf data train model
 
 data:
 	wget -P ./data/ http://hep.tsinghua.edu.cn/~orv/dc/bdeph2021/geo.h5;

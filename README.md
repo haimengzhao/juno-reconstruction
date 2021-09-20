@@ -30,11 +30,17 @@
 
 ```
 |-- project-1-junosap-pmtmender
+		|-- README.md
     |-- requirements.txt
-    |-- requirements.txt
+    |-- Makefile
+    |-- utils.py
+    |-- waveform.py
+    |-- model.ipynb
+    |-- train.ipynb
+    |-- final.ipynb
 ```
 
-其中`requirements.txt` 罗列了本项目的依赖包版本
+其中`README.md` 为本实验报告，`requirements.txt` 罗列了本项目的依赖包版本，`Makefile` 定义了处理流水线， `waveform.py` 进行数据预处理，`train.ipynb` 训练模型，`final.ipynb` 生成预测答案。
 
 ### 0.2. 执行方式
 
@@ -71,21 +77,15 @@ make ans
 make clean
 ```
 
-可以清理下载的数据集
+可以清理下载的数据集、预处理数据和训练模型，但不会清理预测答案。
 
-若要单独测试 `simulate.py` 和 `draw.py` ，可以执行
-
-```shell
-python3 simulate.py -n <num_of_events> -g geo.h5 -o <output_file> [-p <num_of_pmts>]
-python3 draw.py <data_file> -g geo.h5 -o <output_file>
-```
-
-例如：
+若要单独执行预处理数据，可以执行
 
 ```shell
-python3 simulate.py -n 4000 -g geo.h5 -o data.h5
-python3 draw.py data.h5 -g geo.h5 -o figures.pdf
+python3 waveform.py
 ```
+
+若要单独预处理数据和训练模型，可以执行`train.ipynb`和`final.ipynb`。
 
 ## 1. 顶点模拟与光子生成
 
