@@ -30,6 +30,7 @@ def preprocessWF(trainWF):
     intTrainWF = np.sum(denoisedTrainWF, axis=1)
     print("正在计算超出阈值的点数...")
     pointsPerTrainWF = np.sum(denoisedTrainWF > 0, axis=1)
+    '''
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         with multiprocessing.Pool(8) as p:
@@ -44,9 +45,13 @@ def preprocessWF(trainWF):
                     )
                 )
             )
-
-    pePerTrainWFCalc = res[:, 0]
-    meanPeTimePerTrainWF = res[:, 1]
+    '''
+    res = np.empty((2, trainWF.shape[0]))
+    step = 100000
+    for i in tqdm(range(trainWF.shape[0] // step + 1)):
+        res[:, step*i:step*(i+1)] = utils.getPePerWF(denoisedTrainWF[step*i:step*(i+1)])
+    pePerTrainWFCalc = res[0]
+    meanPeTimePerTrainWF = res[1]
     return intTrainWF, pointsPerTrainWF, pePerTrainWFCalc, meanPeTimePerTrainWF
 
 def getPePerTrainWF(trainPET, trainWF):

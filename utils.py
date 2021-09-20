@@ -86,40 +86,38 @@ def getPePerWF(waveform):
         getCancel: 返回一个中心在(maxIndex, maxValue)的绝对值函数，小于0的地方变为0，宽度为16
         '''
         step = maxValue / 8
-        absArray = maxValue - np.abs(np.arange(1000) - maxIndex) * step
+        absArray = maxValue - np.abs(np.arange(1000) - maxIndex.reshape(-1, 1)) * step
         return np.where(absArray > 0, absArray, 0)
 
     cancelledWF = waveform
-    wfArgmax = np.array([])
-    integrate = np.sum(cancelledWF)
-    init_integrate = integrate
-    points_more_than_threshold = np.sum(cancelledWF > 0)
-    init_points = points_more_than_threshold
-    first = True
-    noise_uncancelled_region = np.array([], dtype=int)
-    
-    while integrate >= 150 - max((points_more_than_threshold, 16-points_more_than_threshold))*8 or \
-            (first and points_more_than_threshold >= 4):
-        argmax = np.argmax(cancelledWF)
-        wfArgmax = np.append(wfArgmax, argmax)
-        cancelledWF = cancelledWF - getCancel(argmax, 18)
-        noise_uncancelled_region = np.intersect1d(
-            np.union1d(noise_uncancelled_region, np.arange(argmax-8, argmax+9)),
-            np.arange(1000)
-        )
-        judge_noise = cancelledWF[noise_uncancelled_region]
-        if np.sum(judge_noise) < 2*noise_uncancelled_region.shape[0]:
-            judge_noise = np.where(judge_noise < 8, 0, judge_noise)
-            cancelledWF[noise_uncancelled_region] = judge_noise
-        points_more_than_threshold = cancelledWF.nonzero()[0].shape[0]
-        integrate = np.sum(cancelledWF)
-        first = False
-        #plt.plot(cancelledWF)
-        #plt.show()
-        #breakpoint()
+    integrate = np.sum(cancelledWF, axis=1)
+    points_more_than_threshold = np.sum(cancelledWF > 0, axis=1)
+    noise_uncancelled_region = np.zeros(waveform.shape).astype(bool)
+    peCount = np.zeros(waveform.shape[0], dtype=int)
+    peFilteredCount = np.zeros(waveform.shape[0], dtype=int)
+    peTimeSum = np.zeros(waveform.shape[0])
+    label = points_more_than_threshold >= 4
 
-    filteredWFArgmax = wfArgmax[np.all([wfArgmax >= 150, wfArgmax <= 600], axis=0)]
-    return wfArgmax.shape[0], np.nanmean(filteredWFArgmax)
+    while np.any(label):
+        argmax = np.argmax(cancelledWF[label, :], axis=1)
+        toCancel = getCancel(argmax, 18)
+        cancelledWF[label, :] -= np.round(toCancel).astype(int)
+        noise_uncancelled_region[label, :] = np.logical_or(noise_uncancelled_region[label, :], toCancel)
+        judge_noise = cancelledWF[noise_uncancelled_region]
+        # if np.sum(judge_noise) < 2*noise_uncancelled_region.shape[0]:
+        judge_noise = np.where(judge_noise < 8, 0, judge_noise)
+        cancelledWF[noise_uncancelled_region] = judge_noise
+        
+        integrate = np.sum(cancelledWF, axis=1)
+        points_more_than_threshold = np.sum(cancelledWF > 0, axis=1)
+        
+        peCount[label] += 1
+        peFilteredCount[label] += np.all([argmax <= 600, argmax >= 150], axis=0)
+        peTimeSum[label] += argmax*np.all([argmax <= 600, argmax >= 150], axis=0)
+
+        label = np.logical_and(label, integrate >= 150 - 8*np.maximum(points_more_than_threshold, 16-points_more_than_threshold))
+
+    return peCount, peTimeSum / peFilteredCount
 
 def saveData(X, Y, path):
     h5 = h5py.File(path,'w')
