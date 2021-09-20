@@ -12,7 +12,7 @@
 
 ## 摘要
 
-
+本项目以JUNO中微子探测装置为背景，试图通过物理分析、信号处理与机器学习等技术，从PMT波形中重建出中微子事件的能量。通过数据预处理、特征工程和多级LightGBM的统计学习，我们的算法能在很短的时间内，以很高的精度重构出事件的能量，同时具备很好的可解释性。高效率、高精度、可解释的能量重建手段有助于我们理解中微子质量顺序的难题。
 
 ## 目录
 
@@ -30,6 +30,7 @@
 
 ```
 |-- project-1-junosap-pmtmender
+    |-- requirements.txt
     |-- requirements.txt
 ```
 
@@ -51,17 +52,18 @@ pip install -r requirements.txt
 make
 ```
 
-可以完整地执行整个项目的流程，生成模拟数据文件 `data.h5` 并根据该数据绘制图像 `figures.pdf` 。
+可以完整地执行整个项目的流程，下载训练集、预处理数据、训练模型、生成预测答案。
 
 执行代码
 
 ```shell
-make data.h5
-make figures.pdf
-make probe.pdf
+make data
+make train
+make model
+make ans
 ```
 
-可分别生成模拟数据 `data.h5` 、绘图 `figures.pdf` 以及Sim-driven的Probe函数热力图 `probe.pdf` 。
+可分别下载数据、预处理数据、训练模型、生成预测答案。
 
 执行代码
 
@@ -69,7 +71,7 @@ make probe.pdf
 make clean
 ```
 
-可以清理生成的 `data.h5` 、 `figures.pdf` 和 `probe.pdf` 文件。
+可以清理下载的数据集
 
 若要单独测试 `simulate.py` 和 `draw.py` ，可以执行
 
