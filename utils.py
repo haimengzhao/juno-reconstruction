@@ -1,5 +1,6 @@
 import numpy as np
 import h5py
+from numpy.lib.function_base import percentile
 import pywt
 
 # 小波滤噪
@@ -133,3 +134,23 @@ def saveans(ans, path):
     A["EventID"] = np.array(range(4000))
     A["p"] = ans
     h5.close()
+
+
+# wf (n, 1000) int
+# label (n,) bool 
+# allIndex = np.arange(2000000)
+# PEnum = (n,)
+# allPETime = (n,)
+
+# while (label == True).any:
+#     needManage = allIndex[label]   #需要减去PE的波形的index
+#     wfAfter, times = manage(wf[needManage])   #处理需要减去PE的波形,返回处理完的波形和判断出的时间
+#     wf[needManage] = wfAfter  #把处理完的波形放回wf
+#     PEnum[needManage] = PEnum[needManage] + 1  #增加探测到的光子数
+#     allPETime[needManage] += times
+
+#     wellManaged = ifwellManaged(wfAfter)   #判断处理完的波形是否符合了要求（要求：不需要再处理），返回一个mask，needManage中符合条件的位置为True
+#     doneIndex = needManage[wellManaged]  #返回那些不需要再搞的波形在wf中的index
+#     label[doneIndex] = np.bitwise_not(label[doneIndex]) #将那些搞定了的wf的label设置为False
+
+# return PEnum, allPETime/PEnum
