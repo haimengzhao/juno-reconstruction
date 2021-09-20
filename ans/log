@@ -9,3 +9,7 @@ ans8.h5: 0.091 使用训练集2-16
 ans9.h5: 0.09  调参，p的leaves 2**8, depth=-1
 ansPlay.h5: 0.099 清理代码，使用model.ipynb的代码，训练出两个play模型，并且用play模型跑final.ipynb
 ans10.h5: 0.091 使用全部训练集
+ans11.h5: 0.091 使用手作算法的pePerWFCalc，而不是使用决策树
+ans12.h5: 0.09  在11的基础上，调低learning rate为0.001
+ans13.h5: 0.089 在12的基础上，使用波形积分的线性拟合作为pePerWF
+ans14.h5: 0.092 干脆去掉了预测动量的后两个feature，发现剪枝过头了

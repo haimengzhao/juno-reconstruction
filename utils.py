@@ -34,14 +34,6 @@ def lossfunc_train(y, data):
     hess = 2*np.ones_like(y)/t
     return grad, hess
 
-def tkeo(arr):
-    tkeo = np.copy(arr)
-    # Teager–Kaiser Energy operator
-    tkeo[1:-1] = arr[1:-1]*arr[1:-1] - arr[:-2]*arr[2:]
-    # correct the data in the extremities
-    tkeo[0], tkeo[-1] = tkeo[1], tkeo[-2]
-    return(tkeo)
-
 def loadData(datapath, datatype='geo'):
     with h5py.File(datapath, "r") as in_file: 
         # 如果不是pro，则读取的是数据集h5文件，打印文件结构
@@ -66,6 +58,11 @@ def loadData(datapath, datatype='geo'):
             X = torch.Tensor(np.array(file['X']))
             Y = torch.Tensor(np.array(file['Y']))
             return X, Y
+        
+        # 读取ParticleTruth
+        if datatype == 'p':
+            PT = in_file['ParticleTruth'][...]
+            return PT
         
         # PET = np.array(np.array(file['PETruth']).tolist())
         # 如果是另外的datatype，则返回Waveform
@@ -106,34 +103,28 @@ def getPePerWF(waveform):
     first = True
     noise_uncancelled_region = np.array([], dtype=int)
     
-    while (np.max(cancelledWF) > 8 or integrate >= 80 or first) \
-            and (points_more_than_threshold > 12 or integrate >= 96 or first) \
-            and (wfArgmax.shape[0] or init_points >= 4 or init_integrate >= 60):
+    while integrate >= 150 - max((points_more_than_threshold, 16-points_more_than_threshold))*8 or \
+            (first and points_more_than_threshold >= 4):
         argmax = np.argmax(cancelledWF)
         wfArgmax = np.append(wfArgmax, argmax)
-        cancelledWF = cancelledWF - getCancel(argmax, 12)
+        cancelledWF = cancelledWF - getCancel(argmax, 18)
         noise_uncancelled_region = np.intersect1d(
             np.union1d(noise_uncancelled_region, np.arange(argmax-8, argmax+9)),
             np.arange(1000)
         )
         judge_noise = cancelledWF[noise_uncancelled_region]
-        judge_noise = np.where(judge_noise < 8, 0, judge_noise)
-        cancelledWF[noise_uncancelled_region] = judge_noise
+        if np.sum(judge_noise) < 2*noise_uncancelled_region.shape[0]:
+            judge_noise = np.where(judge_noise < 8, 0, judge_noise)
+            cancelledWF[noise_uncancelled_region] = judge_noise
         points_more_than_threshold = cancelledWF.nonzero()[0].shape[0]
         integrate = np.sum(cancelledWF)
         first = False
+        #plt.plot(cancelledWF)
+        #plt.show()
+        #breakpoint()
 
-    filteredWFArgmax = wfArgmax[np.all([wfArgmax >= 50, wfArgmax <= 600], axis=0)]
+    filteredWFArgmax = wfArgmax[np.all([wfArgmax >= 150, wfArgmax <= 600], axis=0)]
     return wfArgmax.shape[0], np.nanmean(filteredWFArgmax)
-
-
-def getCancel(maxIndex, maxValue):
-    '''
-    getCancel
-    '''
-    step = maxValue / 8
-    absArray = maxValue - np.abs(np.arange(1000) - maxIndex) * step
-    return np.where(absArray > 0, absArray, 0)
 
 class TrainData(Dataset):
     def __init__(self, folder_path):
