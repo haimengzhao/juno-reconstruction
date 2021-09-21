@@ -81,17 +81,18 @@ def getPePerWF(waveform):
     peFilteredCount = np.zeros(waveform.shape[0], dtype=int)
     peTimeSum = np.zeros(waveform.shape[0])
     label = np.where(points_more_than_threshold >= 4)[0]
-    cancelledWF = cancelledWF[label]
-    noise_uncancelled_region = np.zeros(cancelledWF.shape).astype(bool)
+    cancelledWF = np.take(cancelledWF, label, axis=0)
+    noise_uncancelled_region = np.zeros(cancelledWF.shape, dtype=bool)
 
     cancels = np.round(getCancel(np.arange(1000), 18)).astype(int)
 
     while label.shape[0]:
+        print(label.shape[0])
         argmax = np.argmax(cancelledWF, axis=1)
-        toCancel = cancels[argmax]
-        cancelledWF -= toCancel
+        toCancel = np.take(cancels, argmax, axis=0)
+        np.subtract(cancelledWF, toCancel, out=cancelledWF)
         noise_uncancelled_region = np.logical_or(noise_uncancelled_region, toCancel>0)
-        judge_noise = cancelledWF[noise_uncancelled_region]
+        judge_noise = np.compress(noise_uncancelled_region, cancelledWF)
         # if np.sum(judge_noise) < 2*noise_uncancelled_region.shape[0]:
         judge_noise = np.where(judge_noise < 8, 0, judge_noise)
         cancelledWF[noise_uncancelled_region] = judge_noise
@@ -104,9 +105,9 @@ def getPePerWF(waveform):
         peTimeSum[label] += argmax*np.all([argmax <= 600, argmax >= 150], axis=0)
 
         newLabelIndex = integrate >= 150 - 8*np.maximum(points_more_than_threshold, 16-points_more_than_threshold)
-        label = label[newLabelIndex]
-        cancelledWF = cancelledWF[newLabelIndex]
-        noise_uncancelled_region = noise_uncancelled_region[newLabelIndex]
+        label = np.compress(newLabelIndex, label, axis=0)
+        cancelledWF = np.compress(newLabelIndex, cancelledWF, axis=0)
+        noise_uncancelled_region = np.compress(newLabelIndex, noise_uncancelled_region, axis=0)
 
     return peCount, peTimeSum / peFilteredCount
 

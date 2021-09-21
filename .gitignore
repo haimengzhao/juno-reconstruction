@@ -5,3 +5,4 @@ __pycache__/*
 model*.txt
 .vscode/*
 .DS_Store
+makeLog

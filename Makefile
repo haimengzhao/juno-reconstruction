@@ -1,24 +1,36 @@
-.PHONY: all clean
+.PHONY: all clean data train model ans
+
+indices:=$(shell seq 2 19)
+dataFile:=$(indices:%=./data/final-%.h5) ./data/final.h5
+trainFile:=$(indices:%=./train/final_%_wf.h5) ./train/final_wf.h5
+modelFile:=./model/modelPCalc.txt
+ansFile:=./ans/ans16.h5
 
 all: ans
 
 clean:
-	rm -rf data train model
+	rm -rf ${trainFile} ${modelFile} ${ansFile}
 
-data:
-	wget -P ./data/ http://hep.tsinghua.edu.cn/~orv/dc/bdeph2021/geo.h5;
-	for num in $$(seq 2 19); do echo $${num}; wget -P ./data/ http://hep.tsinghua.edu.cn/~orv/dc/bdeph2021/final-$${num}.h5; done
-	wget -P ./data/ http://hep.tsinghua.edu.cn/~orv/dc/bdeph2021/final.h5;
+data: ${dataFile}
 
-train: data
+${dataFile} &:
+	./fetch.sh
+
+train: ${trainFile}
+
+${trainFile} &: ${dataFile}
 	python3 waveform.py
 
-model: train
+model: ${modelFile}
+
+${modelFile}: ${trainFile}
 	jupyter nbconvert --to=python train.ipynb
-	python3 train.py
+	ipython3 train.py
 	rm -f train.py
 
-ans: model
-	jupyter nbconvert --to=python train.ipynb
-	python3 final.py
+ans: ${ansFile}
+
+${ansFile}: ${modelFile}
+	jupyter nbconvert --to=python final.ipynb
+	ipython3 final.py
 	rm -f final.py

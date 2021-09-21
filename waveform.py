@@ -101,7 +101,7 @@ if __name__ == '__main__':
 
 
     # 先处理题目
-    if True:# not os.path.exists(f"./train/final_wf.h5"):
+    if not os.path.exists(f"./train/final_wf.h5"):
         print("下面处理题目...")
         trainWF = utils.loadData(f"./data/final.h5", 'test')
         intTrainWF, pointsPerTrainWF, pePerTrainWFCalc, meanPeTimePerTrainWF = preprocessWF(trainWF)
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     # 循环处理训练集
     for i in range(2, 20):
         print(f"下面处理final-{i}.h5...")
-        if False:#os.path.exists(f"./train/final_{i}_wf.h5"):
+        if os.path.exists(f"./train/final_{i}_wf.h5"):
             print(f"final-{i}.h5已经处理过了，继续...")
             continue
         trainPET, trainWF, trainPT = utils.loadData(f"{trainpathRoot}{i}.h5", 'PT')
