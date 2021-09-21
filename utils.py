@@ -1,21 +1,5 @@
 import numpy as np
 import h5py
-from numpy.lib.function_base import percentile
-import pywt
-
-# 小波滤噪
-def wavelet_denoising(data):
-    # 小波函数取db4
-    db4 = pywt.Wavelet('db4')
-    # 分解
-    coeffs = pywt.wavedec(data, db4)
-    # 高频系数置零
-    coeffs[len(coeffs)-1] *= 0
-    coeffs[len(coeffs)-2] *= 0
-    coeffs[len(coeffs)-3] *= 0
-    # 重构
-    meta = pywt.waverec(coeffs, db4)
-    return meta
 
 def lossfunc_eval(y, data):
     t = data.get_label()
@@ -129,7 +113,7 @@ def saveData(X, Y, path):
 def saveans(ans, path):
     h5 = h5py.File(path,'w')
     A = h5.create_dataset(name='Answer', shape=(4000, ), dtype=np.dtype([('EventID', 'i'), ('p', 'f')]))
-    A["EventID"] = np.array(range(4000))
+    A["EventID"] = np.arange(4000)
     A["p"] = ans
     h5.close()
 

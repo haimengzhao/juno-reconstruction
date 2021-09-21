@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-all: figures.pdf
+all: ans
 
 clean:
 	rm -rf data train model
