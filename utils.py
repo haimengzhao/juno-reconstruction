@@ -61,11 +61,8 @@ def getNum(dataset):
     num = np.diff(indices)
     return num, indices
 
-def getPePerWF(waveform):
-    '''
-    
-    '''
-    def getCancel(maxIndex, maxValue):
+
+def getCancel(maxIndex, maxValue):
         '''
         getCancel: 返回一个中心在(maxIndex, maxValue)的绝对值函数，小于0的地方变为0，宽度为16
         '''
@@ -73,6 +70,10 @@ def getPePerWF(waveform):
         absArray = maxValue - np.abs(np.arange(1000) - maxIndex.reshape(-1, 1)) * step
         return np.where(absArray > 0, absArray, 0)
 
+def getPePerWF(waveform):
+    '''
+    
+    '''
     cancelledWF = waveform
     integrate = np.sum(cancelledWF, axis=1)
     points_more_than_threshold = np.sum(cancelledWF > 0, axis=1)
@@ -92,8 +93,8 @@ def getPePerWF(waveform):
         judge_noise = np.where(judge_noise < 8, 0, judge_noise)
         cancelledWF[noise_uncancelled_region] = judge_noise
         
-        integrate = np.sum(cancelledWF, axis=1)
-        points_more_than_threshold = np.sum(cancelledWF > 0, axis=1)
+        integrate[label] = np.sum(cancelledWF[label, :], axis=1)
+        points_more_than_threshold[label] = np.sum(cancelledWF[label, :] > 0, axis=1)
         
         peCount[label] += 1
         peFilteredCount[label] += np.all([argmax <= 600, argmax >= 150], axis=0)
