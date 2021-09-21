@@ -47,7 +47,7 @@ def preprocessWF(trainWF):
             )
     '''
     res = np.empty((2, trainWF.shape[0]))
-    step = 100000
+    step = 1000000
     for i in tqdm(range(trainWF.shape[0] // step + 1)):
         res[:, step*i:step*(i+1)] = utils.getPePerWF(denoisedTrainWF[step*i:step*(i+1)])
     pePerTrainWFCalc = res[0]
