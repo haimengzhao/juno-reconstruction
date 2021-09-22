@@ -4,7 +4,7 @@ indices:=$(shell seq 2 19)
 dataFile:=$(indices:%=./data/final-%.h5) ./data/final.h5
 trainFile:=$(indices:%=./train/final_%_wf.h5) ./train/final_wf.h5
 modelFile:=./model/modelPCalc.txt
-ansFile:=./ans/ans16.h5
+ansFile:=./ans/ans17.h5
 
 all: ans
 

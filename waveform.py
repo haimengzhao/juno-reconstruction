@@ -1,4 +1,4 @@
-import multiprocessing
+from multiprocessing import Pool
 import os
 import warnings
 import numpy as np
@@ -19,13 +19,14 @@ def preprocessWF(trainWF):
     '''
     print("正在去除波形噪音...")
     denoisedTrainWF = np.empty((trainWF.shape[0], 1000), dtype='<i2')
-    step = 2000000
+    step = 3000000
     for i in tqdm(range(trainWF.shape[0] // step + 1)):
-        denoisedTrainWF[step*i:step*(i+1)] = np.where(
-            trainWF['Waveform'][step*i:step*(i+1), :] < 918,
-            918-trainWF['Waveform'][step*i:step*(i+1), :],
-            0
-        )
+        # denoisedTrainWF[step*i:step*(i+1)] = np.where(
+        #     trainWF['Waveform'][step*i:step*(i+1), :] < 918,
+        #     918-trainWF['Waveform'][step*i:step*(i+1), :],
+        #     0
+        # )
+        denoisedTrainWF[step*i:step*(i+1)] = np.maximum(918-trainWF['Waveform'][step*i:step*(i+1), :], 0)
     print("正在做波形积分...")
     intTrainWF = np.sum(denoisedTrainWF, axis=1)
     print("正在计算超出阈值的点数...")
@@ -46,12 +47,29 @@ def preprocessWF(trainWF):
                 )
             )
     '''
-    res = np.empty((2, trainWF.shape[0]))
-    step = 1000000
-    for i in tqdm(range(trainWF.shape[0] // step + 1)):
-        res[:, step*i:step*(i+1)] = utils.getPePerWF(denoisedTrainWF[step*i:step*(i+1)])
-    pePerTrainWFCalc = res[0]
-    meanPeTimePerTrainWF = res[1]
+    # res = np.empty((2, trainWF.shape[0]))
+    # step = 10000
+    # for i in tqdm(range(trainWF.shape[0] // step + 1)):
+    #     res[:, step*i:step*(i+1)] = utils.getPePerWF(denoisedTrainWF[step*i:step*(i+1)])
+    # pePerTrainWFCalc, meanPeTimePerTrainWF = res
+    # def task(x):
+    #     return utils.getPePerWF(denoisedTrainWF[step*x:step*(x+1)])
+    
+    chunkNum = 100
+    splitedDenoisedTrainWF = np.array_split(denoisedTrainWF, chunkNum)
+
+    with Pool(8) as pool:
+        # step = 100000
+        res = np.concatenate(list(tqdm(
+                                pool.imap(
+                                    utils.getPePerWF,
+                                    splitedDenoisedTrainWF
+                                ),
+                                total=chunkNum
+                                )),
+                            axis=1)
+        pePerTrainWFCalc, meanPeTimePerTrainWF = res
+
     return intTrainWF, pointsPerTrainWF, pePerTrainWFCalc, meanPeTimePerTrainWF
 
 def getPePerTrainWF(trainPET, trainWF):

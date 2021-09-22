@@ -87,12 +87,12 @@ def getPePerWF(waveform):
     cancels = np.round(getCancel(np.arange(1000), 18)).astype(int)
 
     while label.shape[0]:
-        print(label.shape[0])
+        # print(label.shape[0])
         argmax = np.argmax(cancelledWF, axis=1)
         toCancel = np.take(cancels, argmax, axis=0)
         np.subtract(cancelledWF, toCancel, out=cancelledWF)
         noise_uncancelled_region = np.logical_or(noise_uncancelled_region, toCancel>0)
-        judge_noise = np.compress(noise_uncancelled_region, cancelledWF)
+        judge_noise = cancelledWF[noise_uncancelled_region]
         # if np.sum(judge_noise) < 2*noise_uncancelled_region.shape[0]:
         judge_noise = np.where(judge_noise < 8, 0, judge_noise)
         cancelledWF[noise_uncancelled_region] = judge_noise
@@ -109,7 +109,7 @@ def getPePerWF(waveform):
         cancelledWF = np.compress(newLabelIndex, cancelledWF, axis=0)
         noise_uncancelled_region = np.compress(newLabelIndex, noise_uncancelled_region, axis=0)
 
-    return peCount, peTimeSum / peFilteredCount
+    return np.stack((peFilteredCount, peTimeSum / peFilteredCount))
 
 def saveData(X, Y, path):
     h5 = h5py.File(path,'w')
