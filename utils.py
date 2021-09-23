@@ -1,5 +1,8 @@
 import numpy as np
 import h5py
+from multiprocessing import Pool
+from numpy.core.numeric import indices
+from tqdm import tqdm
 
 def lossfunc_eval(y, data):
     t = data.get_label()
@@ -12,7 +15,11 @@ def lossfunc_train(y, data):
     hess = 2 * np.ones_like(y) / t
     return grad, hess
 
+def read(ids):
+    return in_file['Waveform'][ids]
+
 def loadData(datapath, datatype='geo'):
+    global in_file
     with h5py.File(datapath, "r") as in_file: 
         # 如果不是pro，则读取的是数据集h5文件，打印文件结构
         if datatype != 'pro':
@@ -28,7 +35,14 @@ def loadData(datapath, datatype='geo'):
         if datatype == 'PT':
             PT = in_file['ParticleTruth'][...]
             PET = in_file['PETruth'][...]
-            WF = in_file['Waveform'][...]
+
+            WF = np.empty(in_file['Waveform'].shape, dtype=in_file['Waveform'].dtype)
+            chunkNum = 16
+            indices = np.array_split(np.arange(in_file['Waveform'].shape[0]), chunkNum)
+            with Pool(4) as pool:
+                print("正在读取data")
+                WF = np.concatenate(list(tqdm(pool.imap(read, indices), total=chunkNum)))
+                print(f"{WF.shape}")
             return PET, WF, PT
         
         # 读取训练需要的数据
@@ -93,6 +107,7 @@ def getPePerWF(waveform):
         np.subtract(cancelledWF, toCancel, out=cancelledWF)
         noise_uncancelled_region = np.logical_or(noise_uncancelled_region, toCancel>0)
         judge_noise = cancelledWF[noise_uncancelled_region]
+
         # if np.sum(judge_noise) < 2*noise_uncancelled_region.shape[0]:
         judge_noise = np.where(judge_noise < 8, 0, judge_noise)
         cancelledWF[noise_uncancelled_region] = judge_noise
@@ -120,7 +135,7 @@ def saveData(X, Y, path):
 
 def saveans(ans, path):
     h5 = h5py.File(path,'w')
-    A = h5.create_dataset(name='Answer', shape=(4000, ), dtype=np.dtype([('EventID', 'i'), ('p', 'f')]))
+    A = h5.create_dataset(name='Answer', shape=(4000, ), dtype=np.dtype([('EventID', '<i4'), ('p', '<f8')]))
     A["EventID"] = np.arange(4000)
     A["p"] = ans
     h5.close()

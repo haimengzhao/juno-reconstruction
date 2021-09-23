@@ -17,3 +17,5 @@ ansPlay2.h5: 0.151 新的手作算法，一个数据集，但因为model没有�
 ans15.h5: 0.088 使用新的手作算法，所有训练集，pePerWF取手作算法的值
 ans16.h5: 0.088 使用优化后的手作算法，应该与ans15.h5一样
 ans17.h5: 0.087 将pePerWF取手作算法然后筛选暗噪声之后的计数
+ans18.h5: 0.084 调小bagging fraction为0.1，改matrix为custom
+ans19.h5: 0.085 使用四个新的feature: PE总数和PETime平均值的Cu3和Cu4
