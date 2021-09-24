@@ -19,11 +19,13 @@ ${dataFile} &:
 train: ${trainFile}
 
 ${trainFile} &: ${dataFile}
+	mkdir -p train
 	python3 waveform.py
 
 model: ${modelFile}
 
 ${modelFile}: ${trainFile}
+	mkdir -p model
 	jupyter nbconvert --to=python train.ipynb
 	ipython3 train.py
 	rm -f train.py
@@ -31,6 +33,7 @@ ${modelFile}: ${trainFile}
 ans: ${ansFile}
 
 ${ansFile}: ${modelFile}
+	mkdir -p ans
 	jupyter nbconvert --to=python final.ipynb
 	ipython3 final.py
 	rm -f final.py
