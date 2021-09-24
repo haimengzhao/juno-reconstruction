@@ -1,32 +1,45 @@
 import numpy as np
 import h5py
 from multiprocessing import Pool
-from numpy.core.numeric import indices
 from tqdm import tqdm
 
 def lossfunc_eval(y, data):
+    '''
+    lossfunc_eval: 用平台的评分标准来评估决策树
+    '''
     t = data.get_label()
     loss = (y - t) ** 2 / t
     return "custom", np.mean(loss), False
 
 def lossfunc_train(y, data):
+    '''
+    lossfunc_train: 用平台的评分标准算梯度与hessian矩阵
+    '''
     t = data.get_label()
     grad = 2 * (y - t) / t
     hess = 2 * np.ones_like(y) / t
     return grad, hess
 
 def read(ids):
+    '''
+    read: 强行变成多进程用的内部函数
+    '''
     return in_file['Waveform'][ids]
 
-def loadData(datapath, datatype='geo'):
+def loadData(datapath, datatype):
+    '''
+    loadData: 读取h5文件
+    输入：datapath，字符串，表示文件路径
+         datatype，字符串，有以下选择：
+                   geo: 读取几何文件
+                   PT:  读取训练集中的所有表，以PETruth, Waveform, ParticleTruth的顺序返回
+                   p:   读取训练集中的ParticleTruth表
+                   其他: 读取其中的Waveform表
+    输出：若干个structured array
+    '''
     global in_file
-    with h5py.File(datapath, "r") as in_file: 
-        # 如果不是pro，则读取的是数据集h5文件，打印文件结构
-        if datatype != 'pro':
-            print("Structure of data:")
-            for key in in_file.keys():
-                print(in_file[key], key, in_file[key].name)
-        
+    with h5py.File(datapath, "r") as in_file:
+
         # 读取geo.h5
         if datatype == 'geo':
             return in_file['Geometry'][...]
@@ -36,29 +49,27 @@ def loadData(datapath, datatype='geo'):
             PT = in_file['ParticleTruth'][...]
             PET = in_file['PETruth'][...]
 
+            # 多进程读取Waveform
             WF = np.empty(in_file['Waveform'].shape, dtype=in_file['Waveform'].dtype)
             chunkNum = 16
             indices = np.array_split(np.arange(in_file['Waveform'].shape[0]), chunkNum)
             with Pool(4) as pool:
                 print("正在读取data")
                 WF = np.concatenate(list(tqdm(pool.imap(read, indices), total=chunkNum)))
-                print(f"{WF.shape}")
             return PET, WF, PT
-        
-        # 读取训练需要的数据
-        if datatype=='pro':
-            X = np.array(in_file['X'])
-            Y = np.array(in_file['Y'])
-            return X, Y
-        
+
         # 读取ParticleTruth
         if datatype == 'p':
             PT = in_file['ParticleTruth'][...]
             return PT
         
-        # PET = np.array(np.array(file['PETruth']).tolist())
-        # 如果是另外的datatype，则返回Waveform
-        WF = in_file['Waveform'][...]
+        # 如果datatype是另外的，则返回Waveform表
+        WF = np.empty(in_file['Waveform'].shape, dtype=in_file['Waveform'].dtype)
+        chunkNum = 16
+        indices = np.array_split(np.arange(in_file['Waveform'].shape[0]), chunkNum)
+        with Pool(4) as pool:
+            print("正在读取data")
+            WF = np.concatenate(list(tqdm(pool.imap(read, indices), total=chunkNum)))
         return WF
 
 def getNum(dataset):
@@ -77,85 +88,75 @@ def getNum(dataset):
 
 
 def getCancel(maxIndex, maxValue):
-        '''
-        getCancel: 返回一个中心在(maxIndex, maxValue)的绝对值函数，小于0的地方变为0，宽度为16
-        '''
-        step = maxValue / 8
-        absArray = maxValue - np.abs(np.arange(1000) - maxIndex.reshape(-1, 1)) * step
-        return np.where(absArray > 0, absArray, 0)
+    '''
+    getCancel: 返回一个峰值在(maxIndex, maxValue)的三角脉冲波，宽度为16
+    '''
+    step = maxValue / 8
+    absArray = maxValue - np.abs(np.arange(1000) - maxIndex.reshape(-1, 1)) * step
+    return np.where(absArray > 0, absArray, 0)
 
 def getPePerWF(waveform):
     '''
+    getPePerWF: 手作算法，处理波形，得到除去部分暗噪声的PE总数和PETime平均值（以argmax来替代真正的PETime）
     
+    输入: waveform, (n, 1000)ndarray, 表示n个除噪声、反向之后的waveform
+    输出: result, (2, n)ndarray, result[0]表示PE总数，result[1]表示PETime平均值
     '''
+    
+    # 预处理
     cancelledWF = waveform
     integrate = np.sum(cancelledWF, axis=1)
-    points_more_than_threshold = np.sum(cancelledWF > 0, axis=1)
+    points = np.sum(cancelledWF > 0, axis=1)
     peCount = np.zeros(waveform.shape[0], dtype=int)
     peFilteredCount = np.zeros(waveform.shape[0], dtype=int)
     peTimeSum = np.zeros(waveform.shape[0])
-    label = np.where(points_more_than_threshold >= 4)[0]
-    cancelledWF = np.take(cancelledWF, label, axis=0)
-    noise_uncancelled_region = np.zeros(cancelledWF.shape, dtype=bool)
+    
+    label = np.where(points >= 4)[0] # label是要处理的波形的下标
+    cancelledWF = np.take(cancelledWF, label, axis=0) # 取出要处理的波形
+    noiseUncancelledRegion = np.zeros(cancelledWF.shape, dtype=bool) # 存储之前减过不为0的取消函数的区域
 
+    # 预先算好1000个cancel函数
     cancels = np.round(getCancel(np.arange(1000), 18)).astype(int)
 
     while label.shape[0]:
-        # print(label.shape[0])
+        # 先找出argmax，再减去取消函数
         argmax = np.argmax(cancelledWF, axis=1)
         toCancel = np.take(cancels, argmax, axis=0)
         np.subtract(cancelledWF, toCancel, out=cancelledWF)
-        noise_uncancelled_region = np.logical_or(noise_uncancelled_region, toCancel>0)
-        judge_noise = cancelledWF[noise_uncancelled_region]
-
-        # if np.sum(judge_noise) < 2*noise_uncancelled_region.shape[0]:
-        judge_noise = np.where(judge_noise < 8, 0, judge_noise)
-        cancelledWF[noise_uncancelled_region] = judge_noise
         
+        # 判断减去后的波形是否是由噪声导致的
+        noiseUncancelledRegion = np.logical_or(noiseUncancelledRegion, toCancel>0)
+        judgeNoise = cancelledWF[noiseUncancelledRegion]
+        judgeNoise = np.where(judgeNoise < 8, 0, judgeNoise)
+        cancelledWF[noiseUncancelledRegion] = judgeNoise
+        
+        # 重新计算积分与超过0的点数量
         integrate = np.sum(cancelledWF, axis=1)
-        points_more_than_threshold = np.sum(cancelledWF > 0, axis=1)
+        points = np.sum(cancelledWF > 0, axis=1)
         
-        peCount[label] += 1
+        # 去除暗噪声，刷新PE总数与PETime之和
         peFilteredCount[label] += np.all([argmax <= 600, argmax >= 150], axis=0)
         peTimeSum[label] += argmax*np.all([argmax <= 600, argmax >= 150], axis=0)
 
-        newLabelIndex = integrate >= 150 - 8*np.maximum(points_more_than_threshold, 16-points_more_than_threshold)
+        # 判断新的要处理的波形
+        newLabelIndex = integrate >= 150 - 8*np.maximum(points, 16-points)
         label = np.compress(newLabelIndex, label, axis=0)
         cancelledWF = np.compress(newLabelIndex, cancelledWF, axis=0)
-        noise_uncancelled_region = np.compress(newLabelIndex, noise_uncancelled_region, axis=0)
+        
+        # 重置noiseUncancelledRegion
+        noiseUncancelledRegion = np.compress(newLabelIndex, noiseUncancelledRegion, axis=0)
 
     return np.stack((peFilteredCount, peTimeSum / peFilteredCount))
 
-def saveData(X, Y, path):
-    h5 = h5py.File(path,'w')
-    dataX = h5.create_dataset(name='X', data=X)
-    dataY = h5.create_dataset(name='Y', data=Y)
-    h5.close()
-
 
 def saveans(ans, path):
-    h5 = h5py.File(path,'w')
-    A = h5.create_dataset(name='Answer', shape=(4000, ), dtype=np.dtype([('EventID', '<i4'), ('p', '<f8')]))
-    A["EventID"] = np.arange(4000)
-    A["p"] = ans
-    h5.close()
-
-
-# wf (n, 1000) int
-# label (n,) bool 
-# allIndex = np.arange(2000000)
-# PEnum = (n,)
-# allPETime = (n,)
-
-# while (label == True).any:
-#     needManage = allIndex[label]   #需要减去PE的波形的index
-#     wfAfter, times = manage(wf[needManage])   #处理需要减去PE的波形,返回处理完的波形和判断出的时间
-#     wf[needManage] = wfAfter  #把处理完的波形放回wf
-#     PEnum[needManage] = PEnum[needManage] + 1  #增加探测到的光子数
-#     allPETime[needManage] += times
-
-#     wellManaged = ifwellManaged(wfAfter)   #判断处理完的波形是否符合了要求（要求：不需要再处理），返回一个mask，needManage中符合条件的位置为True
-#     doneIndex = needManage[wellManaged]  #返回那些不需要再搞的波形在wf中的index
-#     label[doneIndex] = np.bitwise_not(label[doneIndex]) #将那些搞定了的wf的label设置为False
-
-# return PEnum, allPETime/PEnum
+    '''
+    saveans: 按照标准格式保存答案
+    
+    输入: ans, ndarray, [4000,]，表示计算得到的p值
+         path, 字符串, 表示要存储的文件位置
+    '''
+    with h5py.File(path,'w') as h5:
+        A = h5.create_dataset(name='Answer', shape=(4000, ), dtype=np.dtype([('EventID', '<i4'), ('p', '<f8')]))
+        A["EventID"] = np.arange(4000)
+        A["p"] = ans

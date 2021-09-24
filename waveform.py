@@ -21,53 +21,29 @@ def preprocessWF(trainWF):
     denoisedTrainWF = np.empty((trainWF.shape[0], 1000), dtype='<i2')
     step = 3000000
     for i in tqdm(range(trainWF.shape[0] // step + 1)):
-        # denoisedTrainWF[step*i:step*(i+1)] = np.where(
-        #     trainWF['Waveform'][step*i:step*(i+1), :] < 918,
-        #     918-trainWF['Waveform'][step*i:step*(i+1), :],
-        #     0
-        # )
         denoisedTrainWF[step*i:step*(i+1)] = np.maximum(918-trainWF['Waveform'][step*i:step*(i+1), :], 0)
     print("正在做波形积分...")
     intTrainWF = np.sum(denoisedTrainWF, axis=1)
     print("正在计算超出阈值的点数...")
     pointsPerTrainWF = np.sum(denoisedTrainWF > 0, axis=1)
-    '''
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        with multiprocessing.Pool(8) as p:
-            res = np.array(
-                list(
-                    tqdm(
-                        p.imap(
-                            utils.getPePerWF,
-                            denoisedTrainWF
-                        ),
-                        total=denoisedTrainWF.shape[0]
-                    )
-                )
-            )
-    '''
-    # res = np.empty((2, trainWF.shape[0]))
-    # step = 10000
-    # for i in tqdm(range(trainWF.shape[0] // step + 1)):
-    #     res[:, step*i:step*(i+1)] = utils.getPePerWF(denoisedTrainWF[step*i:step*(i+1)])
-    # pePerTrainWFCalc, meanPeTimePerTrainWF = res
-    # def task(x):
-    #     return utils.getPePerWF(denoisedTrainWF[step*x:step*(x+1)])
-    
+
     chunkNum = 100
     splitedDenoisedTrainWF = np.array_split(denoisedTrainWF, chunkNum)
-
-    with Pool(8) as pool:
-        # step = 100000
-        res = np.concatenate(list(tqdm(
-                                pool.imap(
-                                    utils.getPePerWF,
-                                    splitedDenoisedTrainWF
-                                ),
-                                total=chunkNum
-                                )),
-                            axis=1)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        with Pool(8) as pool:
+            res = np.concatenate(
+                list(
+                    tqdm(
+                        pool.imap(
+                            utils.getPePerWF,
+                            splitedDenoisedTrainWF
+                        ),
+                        total=chunkNum
+                    )
+                ),
+                axis=1
+            )
         pePerTrainWFCalc, meanPeTimePerTrainWF = res
 
     return intTrainWF, pointsPerTrainWF, pePerTrainWFCalc, meanPeTimePerTrainWF

@@ -4,12 +4,11 @@ indices:=$(shell seq 2 19)
 dataFile:=$(indices:%=./data/final-%.h5) ./data/final.h5
 trainFile:=$(indices:%=./train/final_%_wf.h5) ./train/final_wf.h5
 modelFile:=./model/modelPCalc.txt
-ansFile:=./ans/ans19.h5
 
 all: ans
 
 clean:
-	rm -rf ${trainFile} ${modelFile} ${ansFile}
+	rm -rf train model
 
 data: ${dataFile}
 
@@ -30,10 +29,10 @@ ${modelFile}: ${trainFile}
 	ipython3 train.py
 	rm -f train.py
 
-ans: ${ansFile}
-
-${ansFile}: ${modelFile}
+ans: ${modelFile}
 	mkdir -p ans
+	touch ans/log
+	./prompt.sh
 	jupyter nbconvert --to=python final.ipynb
 	ipython3 final.py
 	rm -f final.py
