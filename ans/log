@@ -21,3 +21,5 @@ ans18.h5: 0.084 调小bagging fraction为0.1，改matrix为custom
 ans19.h5: 0.085 使用四个新的feature: PE总数和PETime平均值的Cu3和Cu4
 ans20.h5: 0.096 训练的目标改为p/peTotal
 ans21.h5: 0.103 使用一个训练集，即model.ipynb的代码出来的结果
+ans22.h5: 0.084 最终测试
+ans23.h5: 改成python3，测试

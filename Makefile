@@ -31,7 +31,7 @@ model: ${modelFile}
 ${modelFile}: ${trainFile}
 	mkdir -p model
 	jupyter nbconvert --to=python train.ipynb
-	ipython3 train.py
+	python3 train.py
 	rm -f train.py
 
 # 得到答案
@@ -40,5 +40,5 @@ ans: ${modelFile}
 	touch ans/log
 	./prompt.sh
 	jupyter nbconvert --to=python final.ipynb
-	ipython3 final.py
+	python3 final.py
 	rm -f final.py
